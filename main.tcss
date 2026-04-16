@@ -1,0 +1,52 @@
+Screen {
+    align: center middle;
+    padding: 1
+}
+
+.title {
+    width: 100%;
+    content-align: center top;
+    text-style: bold;
+}
+
+.ch_entry {
+    width: 1fr;
+    height: auto;
+    align-vertical: middle;
+}
+
+.ch_entry Label {
+    width: 50%;
+    content-align: right middle;
+}
+
+.ch_entry Input {
+    width: 10;
+}
+
+Pretty {
+    width: 100%;
+    content-align: center middle;
+}
+
+.notif_entry {
+    height: auto;
+    align: center middle;
+    content-align: center middle;
+}
+
+.amc_entry {
+    width: 1fr;
+    height: auto;
+    align-vertical: middle;
+}
+
+.amc_entry Label {
+    width: 50%;
+    content-align: right middle;
+}
+
+.amc_entry Select {
+    width: 20;
+    content-align: left middle;
+}
