@@ -31,16 +31,21 @@ if os.geteuid() != 0:
 
 ## ! set D-Bus session address
 ## ! no D-Bus set for root
-uid:int = 0
+ruid:int = os.geteuid()     # root uid
+rgid:int = os.getegid()     # root gid
+uuid:int = 0    # user uid
+ugid:int = 0    # user gid
 if os.environ.get('SUDO_USER'):
-    uid = int(os.environ.get('SUDO_UID') or 0)
-    os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{uid}/bus'
+    uuid = int(os.environ.get('SUDO_UID') or ruid)
+    ugid = int(os.environ.get('SUDO_GID') or rgid)
+    os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{uuid}/bus'
 else:
     raise ValueError("no user")
 # continue as user:
 # sudo privileges are only used when needed
 # see main.write2file_charge_control_threshold
-os.seteuid(uid)
+os.setegid(ugid)
+os.seteuid(uuid)
 
 ## ! GLOBAL VARIABLES
 ## PATHS
@@ -188,10 +193,10 @@ class main(tx_app.App):
             # capacity: 0, ..., 100
             status, capacity = None, None
             with open(f"{BAT_PATH}/{main.STATUS}") as file:
-                status = file.read().lower()
+                status = file.read().lower().strip()
                 if status is None: raise ValueError(f"status: {status}")
             with open(f"{BAT_PATH}/{main.CAPACITY}") as file:
-                capacity = int(file.read().lower())
+                capacity = int(file.read().lower().strip())
                 if capacity is None: raise ValueError(f"capacity: {capacity}")
             
             # check against the upper limit
@@ -226,7 +231,7 @@ class main(tx_app.App):
             elif status in ["discharging", "not charging"]:
                 # if it is at or below the lower threshold, AND
                 # the low power callback is not yet set, or has been cancelled
-                if capacity <= int(self.charge_min) and not self.lowpwr_callbacktimer:
+                if capacity <= int(self.charge_min):
                     pwr_select = self.query_one("#pwr_select", tx_widgets.Select).value
                     Notification.send(
                         f"""
@@ -237,9 +242,10 @@ class main(tx_app.App):
                         self.query_one("#notif_sound", tx_widgets.Checkbox).value
                     )
                     # set callback timer for low power action
-                    self.lowpwr_action()
+                    if not self.lowpwr_callbacktimer:
+                        self.lowpwr_action()
                 # if it is close to the lower threshold
-                elif capacity <= int(self.charge_min) - self.CHARGE_CAUTION_MARGIN:
+                elif capacity <= int(self.charge_min) + self.CHARGE_CAUTION_MARGIN:
                     Notification.send(
                         f"""
                         {capacity - int(self.charge_min)} % left to min charge.
@@ -311,7 +317,8 @@ class main(tx_app.App):
     
     def write2file_charge_control_threshold(self, id: str, value: str):
         # perform as root
-        os.seteuid(0)
+        os.seteuid(ruid)
+        os.setegid(rgid)
         print(f"Current EUID: {os.geteuid()}")
 
         SYSFS_FILE = ""
@@ -331,7 +338,8 @@ class main(tx_app.App):
                 file.write(value)
 
         # continue as user
-        os.seteuid(uid)
+        os.seteuid(uuid)
+        os.setegid(ugid)
         print(f"Current EUID: {os.geteuid()}")
 
 
@@ -429,12 +437,18 @@ class Notification_(notify2.Notification):
         # notification object
         super().__init__(None)
 
-        notify2.init("__file__")
+        notify2.init(f"{__file__}")
         self.set_urgency(notify2.URGENCY_NORMAL)
         self.set_timeout(0) # No timeout
 
+        self.__last_msg__ = None
+
     
     def send(self, msg: str, sound: bool) -> None:
+        # do not send repetitive messages
+        if msg == self.__last_msg__:
+            return
+        
         # play notification sound
         if sound:
             Playback.play()
@@ -447,6 +461,9 @@ class Notification_(notify2.Notification):
 
         # show the notification
         self.show()
+
+        # save last message
+        self.__last_msg__ = msg
 
 
     def hide(self) -> None:
@@ -584,4 +601,6 @@ if __name__ == "__main__":
         # run main tui
         main().run()
     finally:
+        Notification.close()
+        Playback.stop()
         print("\033[?1049l", end="", flush=True)
