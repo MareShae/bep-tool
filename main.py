@@ -194,27 +194,25 @@ class main(tx_app.App):
                 capacity = int(file.read().lower().strip())
                 if capacity is None: raise ValueError(f"capacity: {capacity}")
             
-            # check against the upper limit
-            if status in ["charging", "full"]:
-                """
-                when the device is plugged
-                """
-                # cancel any existing callback timer:
+            # when the device is plugged in and receiving power
+            if status in ["charging"]:
+                # cancel any existing low power callback timer:
                 # timer is only for callback on low power
                 # when plugged in, low power callback is irrelevant
                 if self.lowpwr_callbacktimer:
                     self.lowpwr_callbacktimer.cancel()
                     self.lowpwr_callbacktimer = None
+
                 # if it is at or below the upper threshold
                 if capacity >= int(self.charge_max):
                     Notification.send(
                         """
-                        max charge reached.
+                        threshold reached.
                         unplug the charger.
                         """,
                         self.query_one("#notif_sound", tx_widgets.Checkbox).value
                     )
-                # if it is close to the upper threshold
+                # if it is close to the end threshold
                 elif capacity >= int(self.charge_max) - self.CHARGE_CAUTION_MARGIN:
                     Notification.send(
                         f"""
@@ -225,11 +223,8 @@ class main(tx_app.App):
                 else:
                     # hide any notification
                     Notification.hide()
-            # check for lower limit
-            elif status in ["discharging", "not charging"]:
-                """
-                when the device is not plugged
-                """
+            # when the device is not plugged and is providing power
+            elif status in ["discharging"]:
                 # if it is at or below the lower threshold, AND
                 # the low power callback is not yet set, or has been cancelled
                 if capacity <= int(self.charge_min):
@@ -256,6 +251,32 @@ class main(tx_app.App):
                 else:
                     # hide any notification
                     Notification.hide()
+            # when the device is plugged but not charging, due to threshold
+            elif status in ["not charging"]:
+                Notification.send(
+                    """
+                    threshold reached.
+                    unplug the charger.
+                    """,
+                    self.query_one("#notif_sound", tx_widgets.Checkbox).value
+                )
+            # when the device is plugged but not charging, due to capacity
+            elif status in ["full"]:
+                Notification.send(
+                    """
+                    max charge reached.
+                    unplug the charger.
+                    """,
+                    self.query_one("#notif_sound", tx_widgets.Checkbox).value
+                )
+            # unknown state
+            else:
+                Notification.send(
+                    """
+                    unknown battery state.
+                    """,
+                    self.query_one("#notif_sound", tx_widgets.Checkbox).value
+                )
 
 
     @textual.on(tx_widgets.Input.Submitted)
@@ -286,8 +307,8 @@ class main(tx_app.App):
             ])
             # update the previous value to match
             self.charge_max = event.input.value
-            return
-        if event.input.id == "min_charge":
+        
+        elif event.input.id == "min_charge":
             ## validate the min threshold
             # get the max charge as set by the user
             max_charge = self.query_one("#max_charge", tx_widgets.Input).value
@@ -313,7 +334,9 @@ class main(tx_app.App):
             ])
             # update the previous value to match
             self.charge_min = event.input.value
-            return
+
+        else:
+            raise ValueError(f"unknown input widget: {event.input.id}")
         
     
     def write2file_charge_control_threshold(self, id: str, value: str):
