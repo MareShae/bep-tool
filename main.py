@@ -7,8 +7,30 @@ Better Comments by Aaron Bond in VSCode.
 """
 
 
+
 import os
-import sys
+
+## ! ENSURE USER
+## ! restricted privileges even when run as root
+if os.geteuid() == 0:
+    # replaces the root process
+    
+    ruid:int = os.geteuid()     # root uid
+    rgid:int = os.getegid()     # root gid
+    if os.environ.get('SUDO_USER'):
+        uuid = os.environ.get('SUDO_UID')
+        ugid = os.environ.get('SUDO_GID')
+        if uuid is None or ugid is None:
+            raise Exception("no user id")
+        # convert to integers
+        uuid, ugid = int(uuid), int(ugid)
+        # permanently drop to user
+        os.setregid(ugid, ugid)
+        os.setreuid(uuid, uuid)
+    else:
+        raise ValueError("no user")
+    
+
 import time
 import numpy
 import notify2
@@ -21,31 +43,6 @@ import textual.app as tx_app
 import textual.widgets as tx_widgets
 import textual.containers as tx_containers
 
-
-## ! ENSURE ROOT
-## ! root privileges is required for some commands
-if os.geteuid() != 0:
-    # replaces the non-root process
-    print(f"{os.environ.get('USER')} is requesting elevated priveleges")
-    os.execvp('sudo', ['sudo', './.venv/bin/python3'] + sys.argv)
-
-## ! set D-Bus session address
-## ! no D-Bus set for root
-ruid:int = os.geteuid()     # root uid
-rgid:int = os.getegid()     # root gid
-uuid:int = 0    # user uid
-ugid:int = 0    # user gid
-if os.environ.get('SUDO_USER'):
-    uuid = int(os.environ.get('SUDO_UID') or ruid)
-    ugid = int(os.environ.get('SUDO_GID') or rgid)
-    os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{uuid}/bus'
-else:
-    raise ValueError("no user")
-# continue as user:
-# sudo privileges are only used when needed
-# see main.write2file_charge_control_threshold
-os.setegid(ugid)
-os.seteuid(uuid)
 
 ## ! GLOBAL VARIABLES
 ## PATHS
@@ -66,7 +63,7 @@ class main(tx_app.App):
     CSS_PATH = "main.tcss"
 
     # class variables
-    PWR_ACTION_LATENCY: str = "5 minute"
+    PWR_ACTION_LATENCY: str = "1 minute"
     CHARGE_ABS_MAX: int = 80    # absolute allowable max charge
     CHARGE_ABS_MIN: int = 20    # absolute allowable min charge
     CHARGE_CAUTION_MARGIN: int = 5  # notification margin for charge limits
@@ -78,8 +75,6 @@ class main(tx_app.App):
         # user defined max/min limits
         self.charge_max: str = str(main.CHARGE_ABS_MAX)   # max charge
         self.charge_min: str = str(main.CHARGE_ABS_MIN)   # min charge
-
-        print("composing widgets")
 
         ## widgets start here:
         yield tx_widgets.Header()
@@ -201,6 +196,9 @@ class main(tx_app.App):
             
             # check against the upper limit
             if status in ["charging", "full"]:
+                """
+                when the device is plugged
+                """
                 # cancel any existing callback timer:
                 # timer is only for callback on low power
                 # when plugged in, low power callback is irrelevant
@@ -229,6 +227,9 @@ class main(tx_app.App):
                     Notification.hide()
             # check for lower limit
             elif status in ["discharging", "not charging"]:
+                """
+                when the device is not plugged
+                """
                 # if it is at or below the lower threshold, AND
                 # the low power callback is not yet set, or has been cancelled
                 if capacity <= int(self.charge_min):
@@ -316,11 +317,6 @@ class main(tx_app.App):
         
     
     def write2file_charge_control_threshold(self, id: str, value: str):
-        # perform as root
-        os.seteuid(ruid)
-        os.setegid(rgid)
-        print(f"Current EUID: {os.geteuid()}")
-
         SYSFS_FILE = ""
         if id == "max_charge":
             SYSFS_FILE = "charge_control_end_threshold"
@@ -332,15 +328,9 @@ class main(tx_app.App):
             # check that the path contains the sysfs file
             if not SYSFS_FILE in os.listdir(BAT_PATH):
                 continue
-            # write to the file
+            # write to the file with su process do
             BAT_FILE = f"{BAT_PATH}/{SYSFS_FILE}"
-            with open(BAT_FILE, "w") as file:
-                file.write(value)
-
-        # continue as user
-        os.seteuid(uuid)
-        os.setegid(ugid)
-        print(f"Current EUID: {os.geteuid()}")
+            SUProcessDo.write(f"echo '{value}' | sudo tee {BAT_FILE}")
 
 
     def lowpwr_action(self):
@@ -372,6 +362,37 @@ class main(tx_app.App):
 
 
 ## ! SINLGETON CLASSES
+# Super User Process Do
+class SuProcessDo_:
+    def __init__(self) -> None:
+        # get the password
+        import getpass
+        pwd = getpass.getpass(prompt=f'[sudo] password for {os.environ.get("USER")}: ')
+        
+        # open the subprocess
+        self.__suproc__ = subprocess.Popen(
+            ['sudo', '-S', 'sh'],
+            stdin=subprocess.PIPE,
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE,
+            text=True
+        )
+
+        # pipe the password 
+        self.write(pwd)
+
+
+    def write(self, cmd: str):
+        # mainly for vscode error checking
+        if self.__suproc__.stdin is None:
+            return
+        
+        # write to pipe
+        self.__suproc__.stdin.write(cmd+'\n')
+        self.__suproc__.stdin.flush()
+## SuProcessDo as a Singleton
+SUProcessDo = SuProcessDo_()
+
 
 ## Playback
 class Playback_(threading.Thread):
