@@ -13,12 +13,9 @@ Battery replacement can be costly if replacing with an OEM, but less expensive w
 
 ## What It Does
 
-The in-built KDE Neon power management allows for setting the battery charge threshold but it is not persistent and resets after reboot. Simple service scripts do this, however, bep_tool also allows for explicitly setting
-+ your threshold
-+ charge thresholds, and
-+ automated actions with notification reminders.
+The in-built KDE Neon power management allows for setting the battery charge threshold but it is not persistent and resets after reboot. Simple service scripts do this, however, bep_tool also allows for explicitly setting charge thresholds and automated actions with notification reminders.
 
-bep-tool allows users to
+bep-tool allows users to:
 + set start and end charging threshold
 + toogle DBus notification and sound
 + choose what to do when the charge drops to threshold
@@ -44,7 +41,7 @@ To run, in a terminal:
 ```
 ./venv/bin/python3 ./bep-tool
 ```
-Requires a password once.
+It requires a password once at start.
 
 It can also be placed in a .desktop file and applied to auto-start.
 ```
