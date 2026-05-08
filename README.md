@@ -1,23 +1,59 @@
-# BATTERY ENERGY PREFERENCE TOOL (BEP TOOL)
-written in KDE Neon
+# Battery Energy Preference Tool (BEP Tool) 🔋
+
+A Python-based system utility designed to protect the health and extend the life of lithium-ion batteries by exposing charging thresholds to users, and using DBus notifications and sound to alert users when the battery charge approaches and reaches the thresholds. It was written in KDE Neon.
+
+![image of the app](/assets/screenshot.png)
 
 
-[1. Battery Operation Range]
-Charging battery (close) to full or discharging (close) to empty can rapidly deteriorate battery life. Placing limits for charging and discharging can protect battery health and can maximize battery usage.
+## The Problem
+
+Charging a lithium-ion battery (close) to full, or discharging (close) to empty, can rapidly deteriorate battery life. Placing limits for charging and discharging can protect battery health and can maximize battery usage.
 
 Battery replacement can be costly if replacing with an OEM, but less expensive with off-brand options, which can be hit-or-miss for battery quality and life expectancy.
 
-The KDE Neon tools allow for setting the battery charge threshold but it is not persistent and resets after reboot. Simple service scripts do this but this also allows for explicitly setting your threshold, charge thresholds and automated actions with notification reminders.
+## What It Does
 
-[2. Battery Performance]
-EPP replaces cpufreq for better DVFS performance and efficiency. DVFS is based on workload, temperature and other factors to more precisely scale cpu frequency, which applies optimizes power and effectually protect battery life.
+The in-built KDE Neon power management allows for setting the battery charge threshold but it is not persistent and resets after reboot. Simple service scripts do this, however, bep_tool also allows for explicitly setting
++ your threshold
++ charge thresholds, and
++ automated actions with notification reminders.
 
-KDE Neon power profile is limited to 3 hints: power, balanced, performance.
-CPU preferences expands balance hints to: balance performance and balance power
+bep-tool allows users to
++ set start and end charging threshold
++ toogle DBus notification and sound
++ choose what to do when the charge drops to threshold
+   + hybird-sleep
+   + hibernate
+   + power-off
+
+## Installation & Setup
+To install, in a terminal:
+```
+git clone https://github.com/MareShae/bep-tool
+cd bep-tool
+python -m venv venv
+venv/bin/pip install -r requirements.txt
+```
+
+To uninstall, delete the bep-tool folder.
 
 
-[· Function]
-1. Automatically set the (dis)charging limits
-   Sends notifications when charge approaches these limits
-   (Hybrid-)Sleep/hibernate/power-off if charge breaches lower limit
-2. Exposes energy performance options
+## Run
+The application runs in a terminal.
+To run, in a terminal:
+```
+./venv/bin/python3 ./bep-tool
+```
+Requires a password once.
+
+It can also be placed in a .desktop file and applied to auto-start.
+```
+[Desktop Entry]
+Type=Application
+Name=bep-tool
+Comment=Runs bep-tool in a terminal
+Exec=/path/to/ven/python3 /path/to/bep-tool.py
+Icon=utilities-terminal
+Terminal=true
+Categories=System;Utility;
+```

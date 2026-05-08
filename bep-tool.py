@@ -60,7 +60,7 @@ BAT_POWER_SUPPLY = [
 ## TUI
 class main(tx_app.App):
     # the css path for the application
-    CSS_PATH = "main.tcss"
+    CSS_PATH = "./assets/bep_tool.tcss"
 
     # class variables
     PWR_ACTION_LATENCY: str = "1 minute"
