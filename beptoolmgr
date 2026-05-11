@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+
+
+# prevent starting from elevated privileges
+if [ "$EUID" -eq 0 ]; then
+    echo "Please, do not start with `sudo`"
+    exit 2
+fi
+
+
+# get the relative path of this script from whence it was called
+RLTV_DIR="$(dirname $BASH_SOURCE[0])"
+
+# parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --setup)
+            # create the virtual environment
+            python -m venv $RLTV_DIR/venv
+            # install the py requirements
+            $RLTV_DIR/venv/bin/pip install -r $RLTV_DIR/bep-tool/requirements.txt
+            # shift to next
+            shift
+            ;;
+        --run)
+            # run the script
+            x-terminal-emulator -e "$RLTV_DIR/venv/bin/python $RLTV_DIR/bep-tool/bep-tool.py" &
+            # shift to next
+            shift
+            ;;
+    esac
+done

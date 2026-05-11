@@ -2,13 +2,24 @@
 @author mareshae
 @date   April 1, 2026
 
-Some comments use annotations that work with
-Better Comments by Aaron Bond in VSCode.
+Some comments use annotations that work with Better Comments by Aaron Bond in VSCode.
 """
 
 
 
 import os
+import socket
+
+
+## ! SCRIPT IS A SINGLETON
+si_lock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+#  abstract socket prefixed with `\0`
+try:
+    si_lock.bind('\0bep-tool-singleton-lock')
+except socket.error as err:
+    print("bep-tool already runnig: {err}")
+    exit()
+
 
 ## ! ENSURE USER
 ## ! restricted privileges even when run as root
