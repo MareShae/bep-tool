@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --run)
             # run the script
-            x-terminal-emulator -e "$RLTV_DIR/venv/bin/python $RLTV_DIR/bep-tool/bep-tool.py" &
+            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/bep-tool.py; exit; exec bash; '" &
             # shift to next
             shift
             ;;

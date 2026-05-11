@@ -71,7 +71,7 @@ BAT_POWER_SUPPLY = [
 ## TUI
 class main(tx_app.App):
     # the css path for the application
-    CSS_PATH = "./assets/bep_tool.tcss"
+    CSS_PATH = "./bep_tool.tcss"
 
     # class variables
     PWR_ACTION_LATENCY: str = "1 minute"
@@ -492,7 +492,7 @@ class Notification_(notify2.Notification):
         # notification object
         super().__init__(None)
 
-        notify2.init(f"{__file__}")
+        notify2.init(f"{os.path.basename(__file__)}")
         self.set_urgency(notify2.URGENCY_NORMAL)
         self.set_timeout(0) # No timeout
 
