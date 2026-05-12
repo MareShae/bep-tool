@@ -282,13 +282,28 @@ class tui(app.App):
 
         if event.input.id is None: return
 
+        # post to backend
         path = event.input.id.replace("_buffer", "")
-        response = ipcClient.send("POST", path, {"value": event.value})
+        response = await self.send_to_ipc_server("POST", path, {"value": event.value})
         if response is None: exit(1)
 
+        # reset the value in the input space
         wdgt = self.query_one(f"#{event.input.id}", widgets.Input)
         wdgt.value = ""
 
+    
+    @textual.on(widgets.Select.Changed)
+    async def select_changed(self, event:widgets.Select.Changed) -> None:
+        """
+        values are pushed in the backend
+        """
+
+        if event.select.id is None: return
+
+        # post to backend
+        path = event.select.id
+        response = await self.send_to_ipc_server("POST", path, {"value": event.value})
+        if response is None: exit(1)
 
 
 class Notification:

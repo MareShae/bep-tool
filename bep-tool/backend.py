@@ -92,8 +92,8 @@ class BAT:
         HIBERNATE    = "hibernate"
         POWEROFF     = "poweroff"
 
-    LOWPWR_ACTION = LOWPWR_ACTIONS_AVAILABLE.HYBRID_SLEEP
-    LOWPWR_ACTION_LATENCY = 60 # seconds
+    LOWPWR_ACTION: LOWPWR_ACTIONS_AVAILABLE = LOWPWR_ACTIONS_AVAILABLE.HYBRID_SLEEP
+    LOWPWR_ACTION_LATENCY: int = 60 # seconds
     LOWPWR_ACTOR: threading.Thread | None = None
 
     # Threshold
@@ -289,6 +289,12 @@ class ipcServer:
 
         UserDo.write_to_file(paths.CHARGE_CONTROL_START_THRESHOLD, value)
         BAT.MIN = value
+            
+            
+    @staticmethod
+    def on_post_low_power_actions_available(body: dict):
+        value = body["value"]
+        BAT.LOWPWR_ACTION = BAT.LOWPWR_ACTIONS_AVAILABLE(value)
             
 
     @staticmethod
