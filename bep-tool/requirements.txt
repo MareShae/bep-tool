@@ -1,3 +1,6 @@
 numpy
+dbus-python
 notify2
 textual
+pyzmq
+sounddevice

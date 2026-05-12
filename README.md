@@ -14,29 +14,32 @@ Battery replacement can be costly if replacing with an OEM, but less expensive w
 
 ## What It Does
 
-This project was written in KDE Neon. The in-built KDE Neon power management allows for setting the battery charge threshold but it is not persistent and resets after reboot. Simple service scripts do this, however, **bep-tool** also allows for explicitly setting charge thresholds and automated actions with notification reminders.
+This project was written in KDE Neon. The in-built KDE Neon power management allows for setting the battery charge threshold, but it is not persistent and resets after reboot. Simple service scripts do this, however, **bep-tool** also allows for explicitly setting charge thresholds and automated actions with notification alerts.
 
 **bep-tool** allows users to:
-+ set start and end charging threshold
-+ toogle notification and sound alert
-+ choose what to do when the charge drops to threshold
++ control start and end charging threshold
++ toogle notification and audio alerts
++ choose an automatic action at lower power threshold
    + hybird-sleep
    + hibernate
    + power-off
 
 
 ## Setup & Run
-To it up setup, in a terminal:
+To install, in a terminal:
 ```
 git clone https://github.com/MareShae/bep-tool
 cd bep-tool
 
-beptoolmgr --setup
+beptoolmgr --install
 ```
 
-This is a terminal user interface (TUI). To run:
+To uninstall:
+```
+beptoolmgr --install
+```
+
+The user app terminal UI. In a terminal, run:
 ```
 beptoolmgr --run
 ```
-
-It requires a password once at start to grant write permissions to sysfs. It is ONLY used to write charge threshold(s). The script automatically ensures that it runs in user space.

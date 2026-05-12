@@ -8,23 +8,74 @@ if [ "$EUID" -eq 0 ]; then
 fi
 
 
+
 # get the relative path of this script from whence it was called
 RLTV_DIR="$(dirname $BASH_SOURCE[0])"
+ABS_DIR="$(cd $RLTV_DIR && pwd)"
+
+
 
 # parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --setup)
+        --install)
             # create the virtual environment
             python -m venv $RLTV_DIR/venv
+
             # install the py requirements
             $RLTV_DIR/venv/bin/pip install -r $RLTV_DIR/bep-tool/requirements.txt
+
+            SERVICE_PATH="lib/systemd/system/bep-tool.service"
+
+            # install backend as a systemd service
+            sudo truncate -s0 $SERVICE_PATH
+            echo "[Unit]"                                                           | sudo tee -a $SERVICE_PATH
+            echo "Description=Battery Energy Preference Tool"                       | sudo tee -a $SERVICE_PATH
+            echo "After=network.target multi-user.target"                           | sudo tee -a $SERVICE_PATH
+            echo ""                                                                 | sudo tee -a $SERVICE_PATH
+            echo "[Service]"                                                        | sudo tee -a $SERVICE_PATH
+            echo "Type=simple"                                                      | sudo tee -a $SERVICE_PATH
+            echo "ExecStart=$ABS_DIR/venv/bin/python $ABS_DIR/bep-tool/backend.py"  | sudo tee -a $SERVICE_PATH
+            echo "Restart=on-failure"                                               | sudo tee -a $SERVICE_PATH
+            echo "RestartSec=5s"                                                    | sudo tee -a $SERVICE_PATH
+            echo "Environment=PYTHONUNBUFFERED=1"                                   | sudo tee -a $SERVICE_PATH
+            echo ""                                                                 | sudo tee -a $SERVICE_PATH
+            echo "[Install]"                                                        | sudo tee -a $SERVICE_PATH
+            echo "WantedBy=multi-user.target"                                       | sudo tee -a $SERVICE_PATH
+
+            # set the permissions
+            sudo chmod 644 $SERVICE_PATH
+
+            # reload the service list
+            sudo systemctl daemon-reload
+
+            # start the service
+            sudo systemctl start $SERVICE_PATH
+            sudo systemctl enable $SERVICE_PATH     # launch at service boot
+            sudo systemctl status $SERVICE_PATH     # show the live status
+
             # shift to next
             shift
             ;;
+
+        --uninstall)
+            # stop the service
+            sudo systemctl stop $SERVICE_PATH
+
+            # remove the service file
+            sudo rm $SERVICE_PATH
+
+            # reload the service list
+            sudo systemctl daemon-reload
+            
+            # shift to next
+            shift
+            ;;
+
         --run)
             # run the script
-            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/bep-tool.py; exit; exec bash; '" &
+            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/bep-tool.py; exec bash; '" &
+
             # shift to next
             shift
             ;;
