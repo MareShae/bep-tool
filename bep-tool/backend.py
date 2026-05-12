@@ -97,8 +97,8 @@ class BAT:
     LOWPWR_ACTOR: threading.Thread | None = None
 
     # Threshold
-    ABS_MAX: int = 80
-    ABS_MIN: int = 20
+    ABS_MAX: int = 80   # cannot be more than this
+    ABS_MIN: int = 20   # cannot be less than this
     MAX: int = 80
     MIN: int = 20
 
@@ -283,7 +283,7 @@ class ipcServer:
     @staticmethod
     def on_post_charge_control_start_threshold(body: dict):
         # clamp the value to user max and absolute min
-        value = min(BAT.MAX, min(body["value"], BAT.ABS_MIN))
+        value = min(BAT.MAX, max(int(body["value"]), BAT.ABS_MIN))
         # user min must not be equal to user min
         if value == BAT.MAX: return
 
@@ -336,33 +336,36 @@ except socket.error as err:
     exit()
 
 
+try:
 
-# on start:
-# write threshold values to sysfs
-UserDo.write_to_file(paths.CHARGE_CONTROL_END_THRESHOLD, BAT.MAX)
-UserDo.write_to_file(paths.CHARGE_CONTROL_START_THRESHOLD, BAT.MIN)
+    # on start:
+    # write threshold values to sysfs
+    UserDo.write_to_file(paths.CHARGE_CONTROL_END_THRESHOLD, BAT.MAX)
+    UserDo.write_to_file(paths.CHARGE_CONTROL_START_THRESHOLD, BAT.MIN)
 
 
-# on tick
-while True:
-    # sleep for one second
-    now: float = datetime.datetime.now().timestamp()
-    time.sleep(math.ceil(now) - now)
+    # on tick
+    while True:
+        # sleep for one second
+        now: float = datetime.datetime.now().timestamp()
+        time.sleep(math.ceil(now) - now)
 
-    # access the current BAT capacity and status
-    status, err = UserDo.write(f"cat {paths.STATUS[0]}")
-    capacity, err = UserDo.write(f"cat {paths.CAPACITY[0]}")
+        # access the current BAT capacity and status
+        status, err = UserDo.write(f"cat {paths.STATUS[0]}")
+        capacity, err = UserDo.write(f"cat {paths.CAPACITY[0]}")
 
-    # analyze the capacity and status
-    BAT.analyze(capacity, status)
+        # analyze the capacity and status
+        BAT.analyze(capacity, status)
 
-    # read from zmq
-    req = ipcServer.recv()
-    if req is None: continue
-    
-    print(req)
+        # read from zmq
+        req = ipcServer.recv()
+        if req is None: continue
+        
+        print(req)
 
-    # client will be waiting for a response:
-    # analyse the request and correspond accordingly
-    ipcServer.analyze(req)
+        # client will be waiting for a response:
+        # analyse the request and correspond accordingly
+        ipcServer.analyze(req)
 
+except KeyboardInterrupt:
+    print("\n[Ctrl + C] detected. Graceful shutdown ...")

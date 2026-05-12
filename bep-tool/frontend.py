@@ -8,6 +8,7 @@ Some comments use annotations that work with Better Comments by Aaron Bond in VS
 import os
 import zmq
 import time
+import asyncio
 import numpy
 import paths
 import notify2
@@ -159,7 +160,6 @@ class tui(app.App):
         use set_interval to poll every second
         """
         
-        # ticks every second
         self.set_interval(10, self.on_tick)
 
         # flag for on_tick
@@ -170,7 +170,30 @@ class tui(app.App):
     async def send_to_ipc_server(self, method: str, path: str, body: dict={}):
         return ipcClient.send(method, path, body)
     
+
+    async def match_to_backend(self) -> dict | None:
+        # request the value from backend
+        response = await self.send_to_ipc_server("GET", paths.BATTERY_T)
+        await asyncio.sleep(0)
+        if response is None: exit(1)
+        batt = response["body"]
+
+        wdgt = self.query_one(f"#{paths.CHARGE_CONTROL_END_THRESHOLD_T}", widgets.Label)
+        if str(wdgt.content) != str(batt["max"]):
+            wdgt.update(str(batt["max"]))
+
+        wdgt = self.query_one(f"#{paths.CHARGE_CONTROL_START_THRESHOLD_T}", widgets.Label)
+        if str(wdgt.content) != str(batt["min"]):
+            wdgt.update(str(batt["min"]))
+
+        wdgt = self.query_one(f"#{paths.LOW_POWER_ACTIONS_AVAILABLE_T}", widgets.Select)
+        if wdgt.value != str(batt["lowpwr_action"]):
+            wdgt.value = str(batt["lowpwr_action"])
+
+        return response
     
+
+    @textual.work(thread=True)
     async def on_tick(self) -> None:
         """
         sync backend with frontend
@@ -185,22 +208,10 @@ class tui(app.App):
 
             # sync tui values on display with backend
 
-            # request the value from backend
-            response = await self.send_to_ipc_server("GET", paths.BATTERY_T)
+            response = await self.match_to_backend()
+            await asyncio.sleep(0)
             if response is None: exit(1)
             batt = response["body"]
-
-            wdgt = self.query_one(f"#{paths.CHARGE_CONTROL_END_THRESHOLD_T}", widgets.Label)
-            if str(wdgt.content) != str(batt["max"]):
-                wdgt.update(str(batt["max"]))
-
-            wdgt = self.query_one(f"#{paths.CHARGE_CONTROL_START_THRESHOLD_T}", widgets.Label)
-            if str(wdgt.content) != str(batt["min"]):
-                wdgt.update(str(batt["min"]))
-
-            wdgt = self.query_one(f"#{paths.LOW_POWER_ACTIONS_AVAILABLE_T}", widgets.Select)
-            if wdgt.value != str(batt["lowpwr_action"]):
-                wdgt.value = str(batt["lowpwr_action"])
 
             # notifications and alerts
 
@@ -274,6 +285,7 @@ class tui(app.App):
         self.on_tick_flag = False
 
 
+    @textual.work(thread=True)
     @textual.on(widgets.Input.Submitted)
     async def input_changed(self, event:widgets.Input.Submitted) -> None:
         """
@@ -286,12 +298,18 @@ class tui(app.App):
         path = event.input.id.replace("_buffer", "")
         response = await self.send_to_ipc_server("POST", path, {"value": event.value})
         if response is None: exit(1)
+        await asyncio.sleep(0)
+
+        # update the ui
+        await self.match_to_backend()
+        await asyncio.sleep(0)
 
         # reset the value in the input space
         wdgt = self.query_one(f"#{event.input.id}", widgets.Input)
         wdgt.value = ""
 
-    
+
+    @textual.work(thread=True)
     @textual.on(widgets.Select.Changed)
     async def select_changed(self, event:widgets.Select.Changed) -> None:
         """
@@ -303,6 +321,7 @@ class tui(app.App):
         # post to backend
         path = event.select.id
         response = await self.send_to_ipc_server("POST", path, {"value": event.value})
+        await asyncio.sleep(0)
         if response is None: exit(1)
 
 
@@ -434,5 +453,9 @@ if os.geteuid() == 0:
 # start the textual ui
 try:
     tui().run()
+
+except KeyboardInterrupt:
+    print("[Ctrl + C] detected. Graceful shutdown")
+
 finally:
     Notification.close()

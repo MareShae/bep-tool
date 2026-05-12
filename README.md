@@ -2,7 +2,7 @@
 
 A Python-based system utility designed to protect the health and extend the life of lithium-ion batteries by exposing charging thresholds to users, and using notify2 notifications and sound to alert users when the battery charge approaches and reaches the thresholds.
 
-![image of the app](/assets/screenshot.png)
+<video src="/assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
 
 
 ## The Problem

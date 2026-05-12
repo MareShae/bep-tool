@@ -74,7 +74,18 @@ while [[ $# -gt 0 ]]; do
 
         --run)
             # run the script
-            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/bep-tool.py; exec bash; '" &
+            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/frontend.py; exec bash; '" &
+
+            # shift to next
+            shift
+            ;;
+
+        --run_w_log)
+            echo "running with log"
+            echo "$RLTV_DIR/venv/bin/python"
+            echo "$RLTV_DIR/bep-tool/bep-tool.py"
+
+            $RLTV_DIR/venv/bin/python $RLTV_DIR/bep-tool/frontend.py > $RLTV_DIR/log/$(date +%Y%m%d%H%M%S).txt # 2>&1
 
             # shift to next
             shift
