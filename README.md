@@ -1,9 +1,8 @@
-# Battery Energy Preference Tool (BEP Tool) 🔋
+# Battery Energy Preference Tool (bep tool) 🔋
 
 A Python-based system utility designed to protect the health and extend the life of lithium-ion batteries by exposing charging thresholds to users, and using notify2 notifications and sound to alert users when the battery charge approaches and reaches the thresholds.
 
-<video src="/assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
-
+![app screenshot](/assets/screenshot.png)
 
 ## The Problem
 
@@ -23,6 +22,9 @@ This project was written in KDE Neon. The in-built KDE Neon power management all
    + hybird-sleep
    + hibernate
    + power-off
+
+
+<video src="/assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
 
 
 ## Setup & Run
