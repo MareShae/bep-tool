@@ -23,7 +23,7 @@ This project was written in KDE Neon. The in-built KDE Neon power management all
    + hibernate
    + power-off
 
-https://github.com/user-attachments/assets/50beea6a-d086-4976-974f-f1c771d91583
+https://github.com/user-attachments/assets/dffc7228-e248-4489-a92a-903415387507
 
 
 ## Setup & Run
