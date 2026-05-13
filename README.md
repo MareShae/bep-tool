@@ -23,8 +23,7 @@ This project was written in KDE Neon. The in-built KDE Neon power management all
    + hibernate
    + power-off
 
-
-<video src="/assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
+https://github.com/user-attachments/assets/50beea6a-d086-4976-974f-f1c771d91583
 
 
 ## Setup & Run
