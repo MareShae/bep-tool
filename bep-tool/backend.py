@@ -321,6 +321,7 @@ import paths
 
 ## ! PRIVILEGES
 if os.geteuid() != 0:
+    print("running this requires elevated privileges `sudo`")
     exit(2)
 
 

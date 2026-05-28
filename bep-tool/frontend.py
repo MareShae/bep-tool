@@ -447,6 +447,7 @@ if __name__ != "__main__":
 
 ## ! PRIVILEGES
 if os.geteuid() == 0:
+    print("running this requires user privileges")
     exit(2)
 
 
@@ -455,7 +456,7 @@ try:
     tui().run()
 
 except KeyboardInterrupt:
-    print("[Ctrl + C] detected. Graceful shutdown")
+    print("\n[Ctrl + C] detected. Graceful shutdown\n")
 
 finally:
     Notification.close()

@@ -80,6 +80,14 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
 
+        --start)
+            # start the backend
+            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; sudo ./venv/bin/python ./bep-tool/backend.py; exec bash; '" &
+
+            # shift to next
+            shift
+            ;;
+
         --run_w_log)
             echo "running with log"
             echo "$RLTV_DIR/venv/bin/python"
