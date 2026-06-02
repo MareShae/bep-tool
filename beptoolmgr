@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+set -euo pipefail
 
 
 # prevent starting from elevated privileges
@@ -12,69 +13,29 @@ fi
 # get the relative path of this script from whence it was called
 RLTV_DIR="$(dirname $BASH_SOURCE[0])"
 ABS_DIR="$(cd $RLTV_DIR && pwd)"
+ABS_NAME="$(basename $0)"
 
+# let the script path be in /usr/local/bin for user/admin scripts
+SHR_PATH="/opt"
+BIN_PATH="/usr/local/bin"
+
+SCR_PATH="${SHR_PATH}/bep-tool"
+EXECUTE_PATH="$BIN_PATH/bep-tool"
+MANAGER_PATH="$BIN_PATH/$ABS_NAME"
+
+# changed from /lib/systemd/system/...
+SERVICE_NAME="bep-tool.service"
+SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
 
 
 # parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --install)
-            # create the virtual environment
-            python -m venv $RLTV_DIR/venv
-
-            # install the py requirements
-            $RLTV_DIR/venv/bin/pip install -r $RLTV_DIR/bep-tool/requirements.txt
-
-            SERVICE_PATH="lib/systemd/system/bep-tool.service"
-
-            # install backend as a systemd service
-            sudo truncate -s0 $SERVICE_PATH
-            echo "[Unit]"                                                           | sudo tee -a $SERVICE_PATH
-            echo "Description=Battery Energy Preference Tool"                       | sudo tee -a $SERVICE_PATH
-            echo "After=network.target multi-user.target"                           | sudo tee -a $SERVICE_PATH
-            echo ""                                                                 | sudo tee -a $SERVICE_PATH
-            echo "[Service]"                                                        | sudo tee -a $SERVICE_PATH
-            echo "Type=simple"                                                      | sudo tee -a $SERVICE_PATH
-            echo "ExecStart=$ABS_DIR/venv/bin/python $ABS_DIR/bep-tool/backend.py"  | sudo tee -a $SERVICE_PATH
-            echo "Restart=on-failure"                                               | sudo tee -a $SERVICE_PATH
-            echo "RestartSec=5s"                                                    | sudo tee -a $SERVICE_PATH
-            echo "Environment=PYTHONUNBUFFERED=1"                                   | sudo tee -a $SERVICE_PATH
-            echo ""                                                                 | sudo tee -a $SERVICE_PATH
-            echo "[Install]"                                                        | sudo tee -a $SERVICE_PATH
-            echo "WantedBy=multi-user.target"                                       | sudo tee -a $SERVICE_PATH
-
-            # set the permissions
-            sudo chmod 644 $SERVICE_PATH
-
-            # reload the service list
-            sudo systemctl daemon-reload
-
-            # start the service
-            sudo systemctl start $SERVICE_PATH
-            sudo systemctl enable $SERVICE_PATH     # launch at service boot
-            sudo systemctl status $SERVICE_PATH     # show the live status
-
-            # shift to next
-            shift
-            ;;
-
-        --uninstall)
-            # stop the service
-            sudo systemctl stop $SERVICE_PATH
-
-            # remove the service file
-            sudo rm $SERVICE_PATH
-
-            # reload the service list
-            sudo systemctl daemon-reload
-            
-            # shift to next
-            shift
-            ;;
 
         --run)
-            # run the script
-            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; ./venv/bin/python ./bep-tool/frontend.py; exec bash; '" &
+            # run the script (raw)
+            # x-terminal-emulator -e "bash -c 'cd $SCR_PATH; ./venv/bin/python ./frontend.py; exec bash; '" &
+            bep-tool
 
             # shift to next
             shift
@@ -82,19 +43,174 @@ while [[ $# -gt 0 ]]; do
 
         --start)
             # start the backend
-            x-terminal-emulator -e "bash -c 'cd $RLTV_DIR; sudo ./venv/bin/python ./bep-tool/backend.py; exec bash; '" &
+            # x-terminal-emulator -e "bash -c 'cd $SCR_PATH; sudo ./venv/bin/python ./backend.py; exec bash; '" &
+            sudo $SCR_PATH/venv/bin/python $SCR_PATH/backend.py
 
             # shift to next
             shift
             ;;
 
-        --run_w_log)
-            echo "running with log"
-            echo "$RLTV_DIR/venv/bin/python"
-            echo "$RLTV_DIR/bep-tool/bep-tool.py"
+        --run-log)
 
-            $RLTV_DIR/venv/bin/python $RLTV_DIR/bep-tool/frontend.py > $RLTV_DIR/log/$(date +%Y%m%d%H%M%S).txt # 2>&1
+            bep-tool > $SCR_PATH/log/$(date +%Y%m%d%H%M%S).txt # 2>&1
 
+            # shift to next
+            shift
+            ;;
+
+        --install)
+            sudo -E echo ""
+
+            # MANAGER CLIENT
+
+            echo "copy manager to bin"
+            sudo cp $ABS_DIR/$ABS_NAME $MANAGER_PATH
+
+            # THE DIRECTORY
+
+            echo "make directory: $SCR_PATH"
+            # make the script directory
+            sudo mkdir -p $SCR_PATH
+            sudo mkdir -p $SCR_PATH/log
+            echo ""
+
+            echo "copy to directory"
+            # copying contents to the directory
+            # recurisve, preserve attributes, verbose
+            sudo cp -rpv $ABS_DIR/bep-tool/* $SCR_PATH/
+            sudo cp -rpv $ABS_DIR/README.md $SCR_PATH/README.md
+            echo ""
+
+            # ENVRIONMENT
+
+            echo "python venv: $SCR_PATH/venv"
+            # create the virtual environment
+            sudo python3 -m venv $SCR_PATH/venv
+            echo ""
+
+            echo "python requirements"
+            # install the py requirements
+            sudo $SCR_PATH/venv/bin/pip install -r $SCR_PATH/requirements.txt
+            echo ""
+
+            # BACKEND/SERVER
+            # install backend as a systemd service:
+
+            echo "make service file: $SERVICE_PATH"
+            # this creates the new file
+            sudo touch $SERVICE_PATH
+            echo ""
+
+            echo "clear service file contents"
+            # this clears out the contents of the file
+            sudo truncate -s0 $SERVICE_PATH
+            echo ""
+
+            # this writes contents into the file
+            echo "[Unit]"                                                   | sudo tee -a $SERVICE_PATH
+            echo "Description=Battery Energy Preference Tool"               | sudo tee -a $SERVICE_PATH
+            echo "After=network.target multi-user.target"                   | sudo tee -a $SERVICE_PATH
+            echo ""                                                         | sudo tee -a $SERVICE_PATH
+            echo "[Service]"                                                | sudo tee -a $SERVICE_PATH
+            echo "Type=simple"                                              | sudo tee -a $SERVICE_PATH
+            echo "ExecStart=$SCR_PATH/venv/bin/python $SCR_PATH/backend.py" | sudo tee -a $SERVICE_PATH
+            echo "Restart=always"                                           | sudo tee -a $SERVICE_PATH
+            echo "Environment=PYTHONUNBUFFERED=1"                           | sudo tee -a $SERVICE_PATH
+            echo ""                                                         | sudo tee -a $SERVICE_PATH
+            echo "[Install]"                                                | sudo tee -a $SERVICE_PATH
+            echo "WantedBy=multi-user.target"                               | sudo tee -a $SERVICE_PATH
+
+            echo "set service permissions"
+            # set the permissions
+            sudo chmod 644 $SERVICE_PATH
+            echo ""
+
+            echo "reload the systemctl daemon"
+            # reload the service list
+            sudo systemctl daemon-reload
+            echo ""
+
+            echo "start the service"
+            # start the service with service name, not path to service
+            sudo systemctl start $SERVICE_NAME
+            sudo systemctl enable $SERVICE_NAME     # launch at service boot
+            echo ""
+
+            # FOREEND/CLIENT
+            # install foreend as an executable file:
+
+            echo "make service file: $EXECUTE_PATH"
+            # this creates the new file
+            sudo touch $EXECUTE_PATH
+            echo ""
+
+            echo "clear service file contents"
+            # this clears out the contents of the file
+            sudo truncate -s0 $EXECUTE_PATH
+            echo ""
+
+            # this writes contents into the file
+            echo "#!/usr/bin/bash" | sudo tee -a $EXECUTE_PATH
+            echo "$SCR_PATH/venv/bin/python $SCR_PATH/frontend.py" | sudo tee -a $EXECUTE_PATH
+
+            # set execute permissions
+            sudo chmod +x $EXECUTE_PATH
+
+            # FIN INSTALL:
+            # show status log
+            # useful to watch prints
+
+            sudo systemctl status $SERVICE_NAME     # show the live status
+
+            # shift to next
+            shift
+            ;;
+
+        --uninstall)
+            echo "stop the service: $SERVICE_NAME"
+            # stop the service
+            sudo systemctl stop $SERVICE_NAME
+            echo ""
+
+            # remove the user file: bin/bep-tool
+            if [ -f "$EXECUTE_PATH" ]; then
+                echo "remove the user app: $EXECUTE_PATH"
+                sudo rm $EXECUTE_PATH
+                echo ""
+                else
+                echo "`$EXECUTE_PATH` not found"
+            fi
+
+            # remove the service file: bep-tool.service
+            if [ -f "$SERVICE_PATH" ]; then
+                echo "remove the service: $SERVICE_PATH"
+                sudo rm $SERVICE_PATH
+                echo ""
+                else
+                echo "`$SERVICE_PATH` not found"
+            fi
+
+            # remove the script path: opt/bep-tool
+            if [ -d "$SCR_PATH" ]; then
+                echo "remove the sources: $SCR_PATH"
+                sudo rm -rf $SCR_PATH
+                echo ""
+                else
+                echo "`$SCR_PATH` not found"
+            fi
+
+            # remove the manager file: bin/beptoolmgr
+            if [ -f "$MANAGER_PATH" ]; then
+                echo "remove the user app: $MANAGER_PATH"
+                sudo rm $MANAGER_PATH
+                echo ""
+                else
+                echo "`$MANAGER_PATH` not found"
+            fi
+
+            # reload the service list
+            sudo systemctl daemon-reload
+            
             # shift to next
             shift
             ;;

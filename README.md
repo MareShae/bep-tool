@@ -32,15 +32,28 @@ To install, in a terminal:
 git clone https://github.com/MareShae/bep-tool
 cd bep-tool
 
-beptoolmgr --install
+./beptoolmgr --install
 ```
+Installation copies the server and client scripts to */opt/bep-tool* to make them accessible.
+It creates an environment in its folder for isolated dependencies and to prevent system-bloating with packages that may be unneccessary for other scripts. Additionally, it makes for editable scripts and easy uninstall to anyone with sufficient priviliges.
+A service is created @ */etc/systemd/system/bep-tool.service* for the server. System services start at boot, so a user does not have to login to manually, or on user-level, start the server.
+The beptoolmgr used for installation also contains uninstallation. It is copied to */usr/bin/local/beptoolmgr*, `beptoolmgr` to make it accessible in the terminal. `--install` will not work here, and the source is not copied to root to keep its footprint small, since some users may have an allocated space for root. It, however, contains
++ `start` for the server
++ `--run` for the client
++ `--run-log` for the client, but with log
++ `--uninstall` to uninstall
+A client executable is placed @ */usr/bin/local/bep-tool*, `bep-tool` so it is accessible from the terminal. It is essentially the same as `beptoolmgr --run`
 
 To uninstall:
 ```
-beptoolmgr --install
+beptoolmgr --uninstall
 ```
 
 The user app terminal UI. In a terminal, run:
 ```
 beptoolmgr --run
+```
+or, simply
+```
+bep-tool
 ```
